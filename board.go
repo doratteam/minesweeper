@@ -132,6 +132,30 @@ func (b *Board) UncoverCell(row int, col int) {
 	}
 }
 
+func (b *Board) CheckAndUpdateGameState() {
+	if b.gameState == DEFEAT {
+		return
+	}
+	flag := true
+	cnt := 0
+	for i := 0; i < b.height; i++ {
+		for j := 0; j < b.width; j++ {
+			cstat := b.gameBoard[i][j]
+			switch cstat {
+			case COVERED:
+				flag = false
+				break
+			case COVERED_FLAGGED:
+				cnt++
+				break
+			}
+		}
+	}
+	if flag && cnt == b.nmines {
+		b.gameState = VICTORY
+	}
+}
+
 //endregion Board related functions
 
 //region Cell related functions
