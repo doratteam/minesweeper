@@ -6,6 +6,7 @@ Description: All logic for minesweeper board
 package main
 
 import (
+	"container/list"
 	"math/rand"
 	"time"
 )
@@ -17,6 +18,7 @@ type Board struct {
 	width        int
 	height       int
 	nmines       int
+	gameState    int
 }
 
 type Cell struct {
@@ -45,6 +47,13 @@ const (
 	UNCOVERED_MINE   = iota
 )
 
+// consts for game state
+const (
+	ALIVE   = iota
+	VICTORY = iota
+	DEFEAT  = iota
+)
+
 //endregion const declarations
 
 //region Board related functions
@@ -53,6 +62,7 @@ func NewBoard(width int, height int, numberOfMines int) *Board {
 	b.width = width
 	b.height = height
 	b.nmines = numberOfMines
+	b.gameState = ALIVE
 	b.gameBoard = [][]int{}
 	for i := 0; i < height; i++ {
 		row := []int{}
@@ -96,8 +106,30 @@ func (b *Board) GenerateMines(width int, height int, numberOfMines int) {
 }
 
 func (b *Board) UncoverCell(row int, col int) {
-	queue := []*Cell{}
-	queue = append(queue, NewUncoveredCell(row, col, b))
+	queue := list.New()
+	cell := NewUncoveredCell(row, col, b)
+	b.gameBoard[row][col] = cell.stat
+	if cell.stat == UNCOVERED_MINE {
+		b.gameState = DEFEAT
+		return
+	}
+	queue.PushBack(cell)
+	for elm := queue.Front(); elm != nil; elm = queue.Front() {
+		cell = elm.Value.(*Cell)
+		b.gameBoard[cell.row][cell.col] = cell.stat
+		if cell.stat == UNCOVERED_EMPTY {
+			for i := cell.row - 1; i <= cell.row+1; i++ {
+				for j := cell.col - 1; j <= cell.col+1; j++ {
+					if i >= 0 && j >= 0 && i < b.height && j < b.width {
+						if tempCell := NewUncoveredCell(i, j, b); tempCell != nil {
+							queue.PushBack(tempCell)
+						}
+					}
+				}
+			}
+		}
+		_ = queue.Remove(elm)
+	}
 }
 
 //endregion Board related functions
@@ -112,13 +144,17 @@ func NewCell(row int, col int, stat int) *Cell {
 }
 
 func NewUncoveredCell(row int, col int, board *Board) *Cell {
-	switch {
-	case board.__innerBoard[row][col] == MINE:
-		return NewCell(row, col, UNCOVERED_MINE)
-	case board.__innerBoard[row][col] == EMPTY:
-		return NewCell(row, col, UNCOVERED_EMPTY)
-	default:
-		return NewCell(row, col, UNCOVERED_NUMBER)
+	if board.gameBoard[row][col] == COVERED {
+		switch {
+		case board.__innerBoard[row][col] == MINE:
+			return NewCell(row, col, UNCOVERED_MINE)
+		case board.__innerBoard[row][col] == EMPTY:
+			return NewCell(row, col, UNCOVERED_EMPTY)
+		default:
+			return NewCell(row, col, UNCOVERED_NUMBER)
+		}
+	} else {
+		return nil
 	}
 }
 

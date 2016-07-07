@@ -14,7 +14,15 @@ func main() {
 	fmt.Printf("created board of %dx%d\n", b.width, b.height)
 	for i := 0; i < 9; i++ {
 		for j := 0; j < 9; j++ {
-			fmt.Printf("%2d ", b.__innerBoard[i][j])
+			fmt.Printf("%2d ", b.gameBoard[i][j])
+		}
+		fmt.Printf("\n")
+	}
+	b.UncoverCell(0, 0)
+	fmt.Printf("\n")
+	for i := 0; i < 9; i++ {
+		for j := 0; j < 9; j++ {
+			fmt.Printf("%2d ", b.gameBoard[i][j])
 		}
 		fmt.Printf("\n")
 	}
