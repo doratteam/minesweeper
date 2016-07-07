@@ -12,6 +12,10 @@ import (
 func main() {
 	b := NewBoard(9, 9, 10)
 	fmt.Printf("created board of %dx%d\n", b.width, b.height)
-	fmt.Println(b.__board)
-	fmt.Println(b.__mines)
+	for i := 0; i < 9; i++ {
+		for j := 0; j < 9; j++ {
+			fmt.Printf("%2d ", b.__innerBoard[i][j])
+		}
+		fmt.Printf("\n")
+	}
 }
