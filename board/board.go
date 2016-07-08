@@ -3,25 +3,26 @@ Auther: Tai Won Chung
 Description: All logic for minesweeper board
 ************************/
 
-package main
+package board
 
 import (
 	"container/list"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
 //region struct declarations
 type Board struct {
-	gameBoard    [][]int
+	GameBoard    [][]int
 	__innerBoard [][]int
-	width        int
-	height       int
-	nmines       int
-	gameState    int
+	Width        int
+	Height       int
+	Nmines       int
+	GameState    int
 }
 
-type Cell struct {
+type pCell struct {
 	row  int
 	col  int
 	stat int
@@ -38,7 +39,7 @@ const (
 	MINE   = -1   //a cell has a mine if its value is -1
 )
 
-// consts for cell status for gameBoard (user-facing)
+// consts for cell status for GameBoard (user-facing)
 const (
 	COVERED          = iota
 	COVERED_FLAGGED  = iota
@@ -59,17 +60,17 @@ const (
 //region Board related functions
 func NewBoard(width int, height int, numberOfMines int) *Board {
 	b := new(Board)
-	b.width = width
-	b.height = height
-	b.nmines = numberOfMines
-	b.gameState = ALIVE
-	b.gameBoard = [][]int{}
+	b.Width = width
+	b.Height = height
+	b.Nmines = numberOfMines
+	b.GameState = ALIVE
+	b.GameBoard = [][]int{}
 	for i := 0; i < height; i++ {
 		row := []int{}
 		for j := 0; j < width; j++ {
 			row = append(row, COVERED)
 		}
-		b.gameBoard = append(b.gameBoard, row)
+		b.GameBoard = append(b.GameBoard, row)
 	}
 	b.__innerBoard = [][]int{}
 	for i := 0; i < height; i++ {
@@ -108,19 +109,20 @@ func (b *Board) GenerateMines(width int, height int, numberOfMines int) {
 func (b *Board) UncoverCell(row int, col int) {
 	queue := list.New()
 	cell := NewUncoveredCell(row, col, b)
-	b.gameBoard[row][col] = cell.stat
+	b.GameBoard[row][col] = cell.stat
+	defer b.CheckAndUpdateGameState()
 	if cell.stat == UNCOVERED_MINE {
-		b.gameState = DEFEAT
+		b.GameState = DEFEAT
 		return
 	}
 	queue.PushBack(cell)
 	for elm := queue.Front(); elm != nil; elm = queue.Front() {
-		cell = elm.Value.(*Cell)
-		b.gameBoard[cell.row][cell.col] = cell.stat
+		cell = elm.Value.(*pCell)
+		b.GameBoard[cell.row][cell.col] = cell.stat
 		if cell.stat == UNCOVERED_EMPTY {
 			for i := cell.row - 1; i <= cell.row+1; i++ {
 				for j := cell.col - 1; j <= cell.col+1; j++ {
-					if i >= 0 && j >= 0 && i < b.height && j < b.width {
+					if i >= 0 && j >= 0 && i < b.Height && j < b.Width {
 						if tempCell := NewUncoveredCell(i, j, b); tempCell != nil {
 							queue.PushBack(tempCell)
 						}
@@ -133,42 +135,68 @@ func (b *Board) UncoverCell(row int, col int) {
 }
 
 func (b *Board) CheckAndUpdateGameState() {
-	if b.gameState == DEFEAT {
+	if b.GameState == DEFEAT {
 		return
 	}
-	flag := true
 	cnt := 0
-	for i := 0; i < b.height; i++ {
-		for j := 0; j < b.width; j++ {
-			cstat := b.gameBoard[i][j]
-			switch cstat {
-			case COVERED:
-				flag = false
-				break
-			case COVERED_FLAGGED:
+	for i := 0; i < b.Height; i++ {
+		for j := 0; j < b.Width; j++ {
+			switch b.GameBoard[i][j] {
+			case COVERED, COVERED_FLAGGED:
 				cnt++
-				break
 			}
 		}
 	}
-	if flag && cnt == b.nmines {
-		b.gameState = VICTORY
+	if cnt == b.Nmines {
+		b.GameState = VICTORY
 	}
+}
+
+func (b *Board) ToggleCellFlag(row int, col int) {
+	if b.GameBoard[row][col] == COVERED {
+		b.GameBoard[row][col] = COVERED_FLAGGED
+	} else if b.GameBoard[row][col] == COVERED_FLAGGED {
+		b.GameBoard[row][col] = COVERED
+	}
+}
+
+func (b *Board) RenderBoard() [][]rune {
+	renderedBoard := [][]rune{}
+	for i := 0; i < b.Height; i++ {
+		row := []rune{}
+		for j := 0; j < b.Width; j++ {
+			switch b.GameBoard[i][j] {
+			case COVERED:
+				row = append(row, '-')
+			case COVERED_FLAGGED:
+				row = append(row, '+')
+			case UNCOVERED_EMPTY:
+				row = append(row, '.')
+			case UNCOVERED_NUMBER:
+				num := []rune(strconv.FormatInt(int64(b.__innerBoard[i][j]), 10))
+				row = append(row, num[0])
+			case UNCOVERED_MINE:
+				row = append(row, '*')
+			}
+		}
+		renderedBoard = append(renderedBoard, row)
+	}
+	return renderedBoard
 }
 
 //endregion Board related functions
 
 //region Cell related functions
-func NewCell(row int, col int, stat int) *Cell {
-	cell := new(Cell)
+func NewCell(row int, col int, stat int) *pCell {
+	cell := new(pCell)
 	cell.row = row
 	cell.col = col
 	cell.stat = stat
 	return cell
 }
 
-func NewUncoveredCell(row int, col int, board *Board) *Cell {
-	if board.gameBoard[row][col] == COVERED {
+func NewUncoveredCell(row int, col int, board *Board) *pCell {
+	if board.GameBoard[row][col] == COVERED {
 		switch {
 		case board.__innerBoard[row][col] == MINE:
 			return NewCell(row, col, UNCOVERED_MINE)
