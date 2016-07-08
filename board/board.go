@@ -108,7 +108,7 @@ func (b *Board) GenerateMines(width int, height int, numberOfMines int) {
 
 func (b *Board) UncoverCell(row int, col int) {
 	queue := list.New()
-	cell := NewUncoveredCell(row, col, b)
+	cell := newUncoveredCell(row, col, b)
 	b.GameBoard[row][col] = cell.stat
 	defer b.CheckAndUpdateGameState()
 	if cell.stat == UNCOVERED_MINE {
@@ -123,7 +123,7 @@ func (b *Board) UncoverCell(row int, col int) {
 			for i := cell.row - 1; i <= cell.row+1; i++ {
 				for j := cell.col - 1; j <= cell.col+1; j++ {
 					if i >= 0 && j >= 0 && i < b.Height && j < b.Width {
-						if tempCell := NewUncoveredCell(i, j, b); tempCell != nil {
+						if tempCell := newUncoveredCell(i, j, b); tempCell != nil {
 							queue.PushBack(tempCell)
 						}
 					}
@@ -187,7 +187,7 @@ func (b *Board) RenderBoard() [][]rune {
 //endregion Board related functions
 
 //region Cell related functions
-func NewCell(row int, col int, stat int) *pCell {
+func newCell(row int, col int, stat int) *pCell {
 	cell := new(pCell)
 	cell.row = row
 	cell.col = col
@@ -195,15 +195,15 @@ func NewCell(row int, col int, stat int) *pCell {
 	return cell
 }
 
-func NewUncoveredCell(row int, col int, board *Board) *pCell {
+func newUncoveredCell(row int, col int, board *Board) *pCell {
 	if board.GameBoard[row][col] == COVERED {
 		switch {
 		case board.__innerBoard[row][col] == MINE:
-			return NewCell(row, col, UNCOVERED_MINE)
+			return newCell(row, col, UNCOVERED_MINE)
 		case board.__innerBoard[row][col] == EMPTY:
-			return NewCell(row, col, UNCOVERED_EMPTY)
+			return newCell(row, col, UNCOVERED_EMPTY)
 		default:
-			return NewCell(row, col, UNCOVERED_NUMBER)
+			return newCell(row, col, UNCOVERED_NUMBER)
 		}
 	} else {
 		return nil
