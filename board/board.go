@@ -151,6 +151,17 @@ func (b *Board) CheckAndUpdateGameState() {
 		b.GameState = VICTORY
 	}
 }
+func (b *Board) FlagCell(row int, col int) {
+	if b.gameBoard[row][col] == COVERED {
+		b.gameBoard[row][col] = COVERED_FLAGGED
+	}
+}
+
+func (b *Board) UnflagCell(row int, col int) {
+	if b.gameBoard[row][col] == COVERED_FLAGGED {
+		b.gameBoard[row][col] = COVERED
+	}
+}
 
 func (b *Board) ToggleCellFlag(row int, col int) {
 	if b.gameBoard[row][col] == COVERED {
