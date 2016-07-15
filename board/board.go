@@ -176,23 +176,29 @@ func (b *Board) RenderBoard() [][]rune {
 	for i := 0; i < b.Height; i++ {
 		row := []rune{}
 		for j := 0; j < b.Width; j++ {
-			switch b.gameBoard[i][j] {
-			case COVERED:
-				row = append(row, '-')
-			case COVERED_FLAGGED:
-				row = append(row, '+')
-			case UNCOVERED_EMPTY:
-				row = append(row, '.')
-			case UNCOVERED_NUMBER:
-				num := []rune(strconv.FormatInt(int64(b.__innerBoard[i][j]), 10))
-				row = append(row, num[0])
-			case UNCOVERED_MINE:
-				row = append(row, '*')
-			}
+			row = append(row, b.RenderCell(i, j))
 		}
 		renderedBoard = append(renderedBoard, row)
 	}
 	return renderedBoard
+}
+
+func (b *Board) RenderCell(row int, col int) rune {
+	var ret rune
+	switch b.gameBoard[row][col] {
+	case COVERED:
+		ret = '-'
+	case COVERED_FLAGGED:
+		ret = '+'
+	case UNCOVERED_EMPTY:
+		ret = '.'
+	case UNCOVERED_NUMBER:
+		num := []rune(strconv.FormatInt(int64(b.__innerBoard[row][col]), 10))
+		ret = num[0]
+	case UNCOVERED_MINE:
+		ret = '*'
+	}
+	return ret
 }
 
 //endregion Board related functions

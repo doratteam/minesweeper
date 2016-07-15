@@ -10,24 +10,24 @@ type Rule interface {
 }
 
 type BasicUnicellRule struct {
-	A     *Cell
-	Adj_A mapset.Set
+	A    *Cell
+	AdjA mapset.Set
 }
 
 func (r BasicUnicellRule) Condition(gs *GameState) bool {
-	n_mines := r.A.CntMines
-	n_covered := 0
-	for c := range r.Adj_A.Iter() {
+	nmines := r.A.CntMines
+	ncovered := 0
+	for c := range r.AdjA.Iter() {
 		cell := c.(*Cell)
-		if cell.IsCovered {
-			n_covered++
+		if cell.IsCovered || cell.IsFlagged {
+			ncovered++
 		}
 	}
-	return n_mines == n_covered
+	return nmines == ncovered
 }
 
 func (r BasicUnicellRule) ActionToTake(gs *GameState) {
-	for c := range r.Adj_A.Iter() {
+	for c := range r.AdjA.Iter() {
 		cell := c.(*Cell)
 		if cell.IsCovered {
 			gs.CellsToFlag <- cell
@@ -36,25 +36,25 @@ func (r BasicUnicellRule) ActionToTake(gs *GameState) {
 }
 
 type CheckResolvedRule struct {
-	A     *Cell
-	Adj_A mapset.Set
+	A    *Cell
+	AdjA mapset.Set
 }
 
 func (r CheckResolvedRule) Condition(gs *GameState) bool {
-	n_mines := r.A.CntMines
-	n_flagged := 0
-	for c := range r.Adj_A.Iter() {
+	nmines := r.A.CntMines
+	nflagged := 0
+	for c := range r.AdjA.Iter() {
 		cell := c.(*Cell)
 		if cell.IsFlagged {
-			n_flagged++
+			nflagged++
 		}
 	}
-	return n_mines == n_flagged
+	return nmines == nflagged
 }
 
 func (r CheckResolvedRule) ActionToTake(gs *GameState) {
 	gs.MarkCellResolved(r.A)
-	for c := range r.Adj_A.Iter() {
+	for c := range r.AdjA.Iter() {
 		cell := c.(*Cell)
 		if cell.IsCovered {
 			gs.CellsToUncover <- cell

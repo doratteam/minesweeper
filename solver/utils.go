@@ -1,11 +1,14 @@
 package solver
 
 import (
+	"container/list"
+	"strconv"
+
 	mapset "github.com/deckarep/golang-set"
 	"github.com/doratteam/minesweeper/board"
-	//"strconv"
 )
 
+// Cell struct
 type Cell struct {
 	Row        int
 	Col        int
@@ -16,6 +19,7 @@ type Cell struct {
 	IsCovered  bool
 }
 
+//GameState (a.k.a. Truths we know about the game)
 type GameState struct {
 	GameBoard      *board.Board
 	GraphBoard     map[*Cell]mapset.Set //utility structure to help rules
@@ -25,6 +29,8 @@ type GameState struct {
 }
 
 //region GameState related functions
+
+//NewGameState inits a GameState given a board
 func NewGameState(board *board.Board) *GameState {
 	gs := new(GameState)
 	gs.GameBoard = board
@@ -47,22 +53,26 @@ func NewGameState(board *board.Board) *GameState {
 	return gs
 }
 
+//StartCellServers Starts cell servers
 func (gs *GameState) StartCellServers() {
 	go cellFlaggingServer(gs)
 	go cellUncoveringServer(gs)
 }
 
+//EndCellServers Closes channels to stop cell servers
 func (gs *GameState) EndCellServers() {
 	close(gs.CellsToFlag)
 	close(gs.CellsToUncover)
 }
 
+//cellFlaggingServer Server that flags cells
 func cellFlaggingServer(gs *GameState) {
 	for cell := range gs.CellsToFlag {
 		go gs.FlagCell(cell)
 	}
 }
 
+//cellUncoveringServer Server that uncvers cells
 func cellUncoveringServer(gs *GameState) {
 	for cell := range gs.CellsToUncover {
 		go gs.UncoverCell(cell)
@@ -86,6 +96,7 @@ func isOB(row int, col int, height int, width int) bool {
 	return row < 0 || col < 0 || row >= height || col >= width
 }
 
+//MarkCellResolved marks a cell as resolved and removes it from GraphBoard
 func (gs *GameState) MarkCellResolved(cell *Cell) {
 	row := cell.Row
 	col := cell.Col
@@ -101,14 +112,61 @@ func (gs *GameState) MarkCellResolved(cell *Cell) {
 	delete(gs.GraphBoard, cell)
 }
 
+//FlagCell flags a given cell
 func (gs *GameState) FlagCell(cell *Cell) {
 	cell.IsFlagged = true
 	gs.GameBoard.FlagCell(cell.Row, cell.Col)
 }
 
+//UncoverCell uncovers a given cell (cascading)
 func (gs *GameState) UncoverCell(cell *Cell) {
 	cell.IsCovered = false
 	gs.GameBoard.UncoverCell(cell.Row, cell.Col)
+	gs.CascadeUpdateCell(cell)
+}
+
+//CascadeUpdateCell updates truths about cells (cascading)
+func (gs *GameState) CascadeUpdateCell(cell *Cell) {
+	queue := list.New()
+	queue.PushBack(cell)
+	visited := mapset.NewSet()
+	visited.Add(cell)
+	for elm := queue.Front(); elm != nil; elm = queue.Front() {
+		cell = elm.Value.(*Cell)
+		isUpdated := gs.UpdateCell(cell)
+		if isUpdated {
+			for i := cell.Row - 1; i <= cell.Row+1; i++ {
+				for j := cell.Col - 1; j <= cell.Col+1; j++ {
+					if !isOB(i, j, gs.GameBoard.Height, gs.GameBoard.Width) && !visited.Contains(gs.CellMap[i][j]) {
+						queue.PushBack(gs.CellMap[i][j])
+						visited.Add(gs.CellMap[i][j])
+					}
+				}
+			}
+		}
+		_ = queue.Remove(elm)
+	}
+}
+
+//UpdateCell updates truths about a given cell (according to its rendering)
+func (gs *GameState) UpdateCell(cell *Cell) bool {
+	isUpdated := false
+	rc := gs.GameBoard.RenderCell(cell.Row, cell.Col)
+	switch rc {
+	case '.':
+		if cell.IsCovered {
+			cell.IsCovered = false
+			isUpdated = true
+		}
+	case '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		if cell.IsCovered {
+			cell.IsCovered = false
+			i64, _ := strconv.ParseInt(string(rc), 10, 0)
+			cell.CntMines = int(i64)
+			isUpdated = true
+		}
+	}
+	return isUpdated
 }
 
 //endregion
